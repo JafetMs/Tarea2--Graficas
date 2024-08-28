@@ -1,8 +1,14 @@
+//------- Ignore this ----------
+#include<filesystem>
+namespace fs = std::filesystem;
+//------------------------------
+
 #include<iostream>
 #include<glad/glad.h>
 #include<GLFW/glfw3.h>
 #include<stb/stb_image.h>
 
+#include"Texture.h"
 #include"shaderClass.h"
 #include"VAO.h"
 #include"VBO.h"
@@ -18,7 +24,6 @@ GLfloat vertices[] =
 	 0.5f,  0.5f, 0.0f,     0.0f, 0.0f, 1.0f,	1.0f, 1.0f, // Upper right corner
 	 0.5f, -0.5f, 0.0f,     1.0f, 1.0f, 1.0f,	1.0f, 0.0f  // Lower right corner
 };
-
 
 // Indices for vertices order
 GLuint indices[] =
@@ -62,7 +67,7 @@ int main()
 
 
 
-	// Generates Shader object using shaders defualt.vert and default.frag
+	// Generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
 
 
@@ -87,32 +92,28 @@ int main()
 
 	// Gets ID of uniform called "scale"
 	GLuint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
-	
+
+
+
+	/*
+	* I'm doing this relative path thing in order to centralize all the resources into one folder and not
+	* duplicate them between tutorial folders. You can just copy paste the resources from the 'Resources'
+	* folder and then give a relative path from this folder to whatever resource you want to get to.
+	* Also note that this requires C++17, so go to Project Properties, C/C++, Language, and select C++17
+	*/
+	std::string parentDir = (fs::current_path().fs::path::parent_path()).string();
+	std::string texPath = "/img/";
+
 	// Texture
-	int widthImg, heightImg, numColCh;
-	unsigned char* bytes = stbi_load("ola.png", &widthImg,&heightImg,&numColCh,0);
+	Texture popCat((parentDir + texPath + "pla.png").c_str(), GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+	popCat.texUnit(shaderProgram, "tex0", 0);
 
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-
-	glTexImage2D(GL_TEXTURE_2D,0, GL_RGBA, widthImg, heightImg, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes );
-	glGenerateMipmap( GL_TEXTURE_2D);
+	// Original code from the tutorial
+	/*Texture popCat("pop_cat.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+	popCat.texUnit(shaderProgram, "tex0", 0);*/
 
 
-	stbi_image_free(bytes);
-	glBindTexture(GL_TEXTURE_2D,0);
-	
-	GLuint text0Uni = glGetUniformLocation(shaderProgram.ID, "tex0");
-	 shaderProgram.Activate();
-	glUniform1i(text0Uni, 0);
-	
+
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -124,6 +125,8 @@ int main()
 		shaderProgram.Activate();
 		// Assigns a value to the uniform; NOTE: Must always be done after activating the Shader Program
 		glUniform1f(uniID, 0.5f);
+		// Binds texture so that is appears in rendering
+		popCat.Bind();
 		// Bind the VAO so OpenGL knows to use it
 		VAO1.Bind();
 		// Draw primitives, number of indices, datatype of indices, index of indices
@@ -140,7 +143,7 @@ int main()
 	VAO1.Delete();
 	VBO1.Delete();
 	EBO1.Delete();
-	glDeleteTextures(1,&texture);
+	popCat.Delete();
 	shaderProgram.Delete();
 	// Delete window before ending the program
 	glfwDestroyWindow(window);
